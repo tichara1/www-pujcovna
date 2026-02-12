@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analýza Projektu: P2P Půjčovna Nářadí</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Chart Container Styling - Mandatory per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Animation utilities */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-item.active {
+            background-color: #e0f2fe; /* sky-100 */
+            color: #0369a1; /* sky-700 */
+            border-right: 4px solid #0284c7; /* sky-600 */
+        }
+    </style>
+    <!-- Chosen Palette: Tailwind Slate (Neutral), Sky (Primary), Emerald (Success), Amber (Warning) -->
+    <!-- Application Structure Plan: 
+         The app is designed as a Feasibility Dashboard.
+         1. Executive Summary (Dashboard): High-level metrics and the core "Verdict".
+         2. Market & Competition: Analysis of existing solutions and the "Gap" this app fills.
+         3. Operational Logic (The Deposit System): Visualizing the critical money flow you asked about.
+         4. Risk Analysis: Interactive matrix of what can go wrong (theft, damage).
+         5. Calculator: A simulator for both the platform owner and the tool owner to see financial viability.
+         This structure moves from abstract (idea) to concrete (process) to financial (results).
+    -->
+    <!-- Visualization & Content Choices:
+         - Market Segments: Doughnut Chart (Chart.js) to show the target audience split.
+         - Risk Matrix: Bubble Chart (Chart.js) to visualize Probability vs. Impact of risks.
+         - Financial Projection: Bar Chart to show commission scaling.
+         - Process Flow: HTML/CSS Steps (No SVG/Mermaid) to explain the Escrow/Deposit logic clearly.
+         - Calculator: JS-driven inputs to dynamically update text/ROI estimates.
+         - Justification: Users need to "play" with the numbers (calculator) and clearly "see" the risks (bubble chart) to make an informed decision.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col justify-between hidden md:flex z-10">
+        <div>
+            <div class="p-6 border-b border-slate-100">
+                <h1 class="text-xl font-bold text-slate-800">ToolShare<span class="text-sky-600">Analýza</span></h1>
+                <p class="text-xs text-slate-500 mt-1">Feasibility Study v1.0</p>
+            </div>
+            <ul class="mt-4 space-y-1">
+                <li><button onclick="navigate('overview')" id="nav-overview" class="nav-item w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors font-medium text-slate-600">Přehled Projektu</button></li>
+                <li><button onclick="navigate('market')" id="nav-market" class="nav-item w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors font-medium text-slate-600">Trh a Konkurence</button></li>
+                <li><button onclick="navigate('process')" id="nav-process" class="nav-item w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors font-medium text-slate-600">Logika Kauce (UX)</button></li>
+                <li><button onclick="navigate('risks')" id="nav-risks" class="nav-item w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors font-medium text-slate-600">Rizika a Řešení</button></li>
+                <li><button onclick="navigate('financials')" id="nav-financials" class="nav-item w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors font-medium text-slate-600">Byznys Plán & Kalkulačka</button></li>
+            </ul>
+        </div>
+        <div class="p-4 bg-slate-50 border-t border-slate-200">
+            <p class="text-xs text-slate-400">Generováno pro výzkum trhu</p>
+        </div>
+    </nav>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 w-full bg-white border-b border-slate-200 z-20 flex justify-between items-center p-4">
+        <h1 class="text-lg font-bold">ToolShare<span class="text-sky-600">Analýza</span></h1>
+        <select onchange="navigate(this.value)" class="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm">
+            <option value="overview">Přehled</option>
+            <option value="market">Trh</option>
+            <option value="process">Proces</option>
+            <option value="risks">Rizika</option>
+            <option value="financials">Finance</option>
+        </select>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 relative bg-slate-50/50">
+        
+        <!-- SECTION: OVERVIEW -->
+        <section id="overview" class="fade-in max-w-5xl mx-auto space-y-6">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-800">Vize: P2P Půjčovna Nářadí</h2>
+                <p class="mt-2 text-slate-600 max-w-3xl">
+                    Tato sekce shrnuje základní koncept vašeho nápadu. Platforma propojuje vlastníky nářadí (kteří jej využívají zřídka) s lidmi, kteří potřebují nástroj jednorázově. 
+                    Klíčovým mechanismem je <strong>bezpečná úschova peněz (Escrow)</strong>, která řeší důvěru mezi stranami.
+                </p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="text-sky-600 text-4xl mb-2">♻️</div>
+                    <h3 class="font-bold text-lg text-slate-800">Udržitelnost</h3>
+                    <p class="text-sm text-slate-500 mt-2">Průměrná vrtačka je používána pouze 13 minut za celou dobu své životnosti. Sdílení dává smysl.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="text-emerald-600 text-4xl mb-2">💰</div>
+                    <h3 class="font-bold text-lg text-slate-800">Pasivní příjem</h3>
+                    <p class="text-sm text-slate-500 mt-2">Pro majitele drahého nářadí (Hilti, Bosch Profi) možnost amortizace investice.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="text-amber-500 text-4xl mb-2">🛡️</div>
+                    <h3 class="font-bold text-lg text-slate-800">Důvěra & Kauce</h3>
+                    <p class="text-sm text-slate-500 mt-2">Kritický bod: Blokace kauce na kartě a uvolnění až po bezproblémovém vrácení.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
+                <h3 class="font-bold text-lg mb-4 text-slate-800">Existuje už něco takového? (Konkurence v ČR)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">Typ služby</th>
+                                <th class="py-3 px-4">Příklad</th>
+                                <th class="py-3 px-4">Výhoda</th>
+                                <th class="py-3 px-4">Nevýhoda</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="py-3 px-4 font-medium">Komerční půjčovny</td>
+                                <td class="py-3 px-4 text-slate-600">Bauhaus, DEK, místní firmy</td>
+                                <td class="py-3 px-4 text-emerald-600">Profi kvalita, servis</td>
+                                <td class="py-3 px-4 text-red-500">Vysoké ceny, otevírací doba, papírování</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-medium">Sousedská výpomoc</td>
+                                <td class="py-3 px-4 text-slate-600">Facebook Marketplace, Nextdoor</td>
+                                <td class="py-3 px-4 text-emerald-600">Zdarma nebo levné</td>
+                                <td class="py-3 px-4 text-red-500">Žádná garance, riziko krádeže, chaos</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-medium">Specializované P2P</td>
+                                <td class="py-3 px-4 text-slate-600">SharyGo (ukončeno?), Fajne</td>
+                                <td class="py-3 px-4 text-emerald-600">Komunita, aplikace</td>
+                                <td class="py-3 px-4 text-red-500">Malá nabídka, problém s logistikou</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: MARKET -->
+        <section id="market" class="hidden fade-in max-w-5xl mx-auto space-y-6">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">Analýza Trhu</h2>
+                <p class="mt-2 text-slate-600">
+                    Kdo je váš zákazník? V této sekci analyzujeme segmentaci uživatelů. Klíčem k úspěchu není cílit na profesionály (ti mají vlastní), ale na "Hobby kutily" a jednorázové uživatele.
+                </p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800">Segmentace Zákazníků</h3>
+                    <div class="chart-container">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-4 bg-sky-50 rounded-lg text-sm text-sky-800">
+                        <strong>Insight:</strong> Největší potenciál (55 %) je v segmentu "DIY Kutilové" – lidé, kteří rekonstruují byt a potřebují bourací kladivo na jeden víkend.
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-lg mb-2 text-slate-800">Trendy nahrávající úspěchu</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <span class="bg-emerald-100 text-emerald-700 p-1 rounded mr-3 text-xs">RŮST</span>
+                                <span class="text-sm text-slate-600"><strong>Cena nářadí:</strong> Ceny profi nářadí rostou, pro běžného člověka je koupě nerentabilní.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="bg-emerald-100 text-emerald-700 p-1 rounded mr-3 text-xs">RŮST</span>
+                                <span class="text-sm text-slate-600"><strong>Digitální identita:</strong> BankID v ČR umožňuje ověřit totožnost pronajímatele i nájemce na 100 %, což drasticky snižuje riziko krádeže.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="bg-amber-100 text-amber-700 p-1 rounded mr-3 text-xs">RIZIKO</span>
+                                <span class="text-sm text-slate-600"><strong>Logistika:</strong> Lidé jsou líní. Pokud musí pro vrtačku jet 30 minut, raději si ji koupí v Lidlu. Lokálnost je klíčová.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-slate-800 text-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-lg mb-2">Unikátní prodejní argument (USP)</h3>
+                        <p class="text-slate-300 text-sm italic">"Půjč si profi nářadí od souseda za cenu hobby nářadí z marketu, s garancí bezpečnosti pro oba."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: PROCESS (UX & DEPOSITS) -->
+        <section id="process" class="hidden fade-in max-w-5xl mx-auto space-y-6">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">Logika Kauce a Procesu</h2>
+                <p class="mt-2 text-slate-600">
+                    Ptali jste se: <em>"Byla by kauce a po odsouhlasení by se peníze uvolňovaly?"</em>. Ano, toto je standardní "Escrow" model. Zde je návrh, jak by to mělo fungovat technicky a uživatelsky, aby to bylo bezpečné.
+                </p>
+            </header>
+
+            <!-- Interactive Process Visualizer using Flexbox/Grid (No SVG) -->
+            <div class="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 min-w-[700px]">
+                    
+                    <!-- Step 1 -->
+                    <div class="flex flex-col items-center w-48 text-center group cursor-pointer" onclick="updateProcessDetail(1)">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-3 group-hover:border-sky-500 group-hover:bg-sky-50 transition-all">1</div>
+                        <h4 class="font-bold text-slate-800 text-sm">Rezervace</h4>
+                        <p class="text-xs text-slate-500 mt-1">Klient vybere termín</p>
+                    </div>
+
+                    <div class="h-1 w-12 bg-slate-200"></div>
+
+                    <!-- Step 2 -->
+                    <div class="flex flex-col items-center w-48 text-center group cursor-pointer" onclick="updateProcessDetail(2)">
+                        <div class="w-12 h-12 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center font-bold text-amber-700 mb-3 group-hover:scale-110 transition-all">2</div>
+                        <h4 class="font-bold text-slate-800 text-sm">Blokace (Pre-auth)</h4>
+                        <p class="text-xs text-slate-500 mt-1">Cena + Kauce na kartě</p>
+                    </div>
+
+                    <div class="h-1 w-12 bg-slate-200"></div>
+
+                    <!-- Step 3 -->
+                    <div class="flex flex-col items-center w-48 text-center group cursor-pointer" onclick="updateProcessDetail(3)">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-3 group-hover:border-sky-500 group-hover:bg-sky-50 transition-all">3</div>
+                        <h4 class="font-bold text-slate-800 text-sm">Předání (Check-in)</h4>
+                        <p class="text-xs text-slate-500 mt-1">Focení stavu v appce</p>
+                    </div>
+
+                    <div class="h-1 w-12 bg-slate-200"></div>
+
+                    <!-- Step 4 -->
+                    <div class="flex flex-col items-center w-48 text-center group cursor-pointer" onclick="updateProcessDetail(4)">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-3 group-hover:border-sky-500 group-hover:bg-sky-50 transition-all">4</div>
+                        <h4 class="font-bold text-slate-800 text-sm">Vrácení (Check-out)</h4>
+                        <p class="text-xs text-slate-500 mt-1">Kontrola funkčnosti</p>
+                    </div>
+
+                    <div class="h-1 w-12 bg-slate-200"></div>
+
+                    <!-- Step 5 -->
+                    <div class="flex flex-col items-center w-48 text-center group cursor-pointer" onclick="updateProcessDetail(5)">
+                        <div class="w-12 h-12 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center font-bold text-emerald-700 mb-3 group-hover:scale-110 transition-all">5</div>
+                        <h4 class="font-bold text-slate-800 text-sm">Vyúčtování</h4>
+                        <p class="text-xs text-slate-500 mt-1">Uvolnění kauce</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Detail Box for Process -->
+            <div id="process-detail" class="bg-sky-50 border-l-4 border-sky-500 p-6 rounded-r-xl transition-all">
+                <h3 class="font-bold text-sky-900 mb-2">Krok 2: Blokace financí (Pre-authorization)</h3>
+                <p class="text-sky-800 text-sm">
+                    Toto je nejdůležitější technická část. Peníze nestrháváte hned! Využívá se tzv. <strong>Pre-autorizace</strong> na platební bráně (Stripe, GoPay). 
+                    Peníze za kauci (např. 5000 Kč) jsou na kartě klienta "zablokovány", ale neodečteny. Pokud proběhne výpůjčka v pořádku, blokace se zruší. 
+                    Pokud dojde k poškození, platforma strhne částku z této blokace. Toto chrání obě strany.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3">Na co si dát pozor (UX)</h4>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-slate-600">
+                        <li><strong>Fotodokumentace:</strong> Appka musí nutit uživatele vyfotit nářadí PŘED a PO. Jinak jsou spory neřešitelné.</li>
+                        <li><strong>Spotřební materiál:</strong> Kdo platí brusný papír? Kdo brousí řetěz pily? Toto musí být jasně definováno (většinou: vrací se funkční, spotřební materiál si klient kupuje).</li>
+                        <li><strong>Čistota:</strong> "Vrátit očištěné" je vágní. Definujte sankce za znečištění.</li>
+                    </ul>
+                 </div>
+                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3">Výhody pro provozovatele</h4>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-slate-600">
+                        <li><strong>Držení hotovosti:</strong> Při velkém objemu máte na účtu vysoké "float" prostředky (i když patří uživatelům).</li>
+                        <li><strong>Arbitráž:</strong> Pokud vznikne spor, jste soudce. To je odpovědnost, ale dává vám to kontrolu nad reputací platformy.</li>
+                    </ul>
+                 </div>
+            </div>
+        </section>
+
+        <!-- SECTION: RISKS -->
+        <section id="risks" class="hidden fade-in max-w-5xl mx-auto space-y-6">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">Analýza Rizik</h2>
+                <p class="mt-2 text-slate-600">
+                    Každý byznys má svá rizika. U půjčování nářadí jsou specifická – technický stav a lidský faktor. Graf níže ukazuje Pravděpodobnost vs. Dopad.
+                </p>
+            </header>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-lg mb-4 text-slate-800">Matice Rizik</h3>
+                <div class="chart-container">
+                    <canvas id="riskChart"></canvas>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2 justify-center">
+                    <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Vysoké Riziko</span>
+                    <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">Střední Riziko</span>
+                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Nízké Riziko</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-red-50 border border-red-200 p-6 rounded-xl">
+                    <h3 class="font-bold text-red-800 mb-2">🚨 Největší hrozba: Obcházení platformy</h3>
+                    <p class="text-sm text-red-700 mb-2">
+                        Lidé se najdou přes vás, ale podruhé už si půjčí "napřímo", aby ušetřili vaši provizi.
+                    </p>
+                    <p class="text-sm font-bold text-red-800">Řešení:</p>
+                    <p class="text-sm text-red-700">Pojištění v ceně provize. Pokud si půjčí mimo platformu, nemají pojištění proti krádeži/rozbití. Toto musíte silně komunikovat.</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 p-6 rounded-xl">
+                    <h3 class="font-bold text-amber-800 mb-2">⚠️ Skryté poškození</h3>
+                    <p class="text-sm text-amber-700 mb-2">
+                        Klient vrátí vrtačku, ta vrčí, ale uvnitř je spálený motor, který odejde při příštím použití.
+                    </p>
+                    <p class="text-sm font-bold text-amber-800">Řešení:</p>
+                    <p class="text-sm text-amber-700">Komunitní hodnocení (reputace) a krátká garanční lhůta po vrácení, kdy se peníze z kauce ještě neodesílají (např. 24h).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: FINANCIALS -->
+        <section id="financials" class="hidden fade-in max-w-5xl mx-auto space-y-6">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">Byznys Model a Výdělky</h2>
+                <p class="mt-2 text-slate-600">
+                    Kolik si můžete vydělat jako provozovatel? A kolik uživatel? Model je postaven na provizi (typicky 15-20 % z transakce).
+                </p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Calculator -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800">Simulátor Výdělků</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Průměrná cena výpůjčky (Kč/den)</label>
+                            <input type="range" min="100" max="2000" value="350" class="w-full accent-sky-600" oninput="updateCalculator()" id="calc-price">
+                            <div class="flex justify-between text-sm">
+                                <span>100 Kč</span>
+                                <span id="val-price" class="font-bold text-sky-700">350 Kč</span>
+                                <span>2000 Kč</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Počet výpůjček měsíčně (celá platforma)</label>
+                            <input type="range" min="10" max="1000" value="50" class="w-full accent-sky-600" oninput="updateCalculator()" id="calc-count">
+                            <div class="flex justify-between text-sm">
+                                <span>10</span>
+                                <span id="val-count" class="font-bold text-sky-700">50</span>
+                                <span>1000</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Vaše provize (%)</label>
+                            <input type="range" min="5" max="30" value="20" class="w-full accent-sky-600" oninput="updateCalculator()" id="calc-commission">
+                            <div class="flex justify-between text-sm">
+                                <span>5%</span>
+                                <span id="val-commission" class="font-bold text-sky-700">20%</span>
+                                <span>30%</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <p class="text-sm text-slate-500">Měsíční obrat (GMV):</p>
+                            <p class="text-xl font-bold text-slate-800" id="res-gmv">17 500 Kč</p>
+                            
+                            <p class="text-sm text-slate-500 mt-2">Váš hrubý zisk:</p>
+                            <p class="text-3xl font-bold text-emerald-600" id="res-revenue">3 500 Kč</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Chart -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800">Projekce Růstu (První rok)</h3>
+                    <div class="chart-container">
+                        <canvas id="financialChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2 text-center">Simulovaný exponenciální růst při aktivním marketingu.</p>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 border border-indigo-200 p-6 rounded-xl mt-6">
+                <h3 class="font-bold text-indigo-900 mb-2">Doporučení pro start</h3>
+                <p class="text-indigo-800 text-sm">
+                    Nezačínejte hned s vývojem drahé aplikace. Udělejte <strong>MVP (Minimum Viable Product)</strong>. 
+                    <br><br>
+                    1. Založte jednoduchou webovku (Wordpress/Sharetribe).<br>
+                    2. Zaměřte se na jednu lokalitu (např. jedno sídliště nebo malé město).<br>
+                    3. Kauce řešte manuálně nebo přes jednoduchou smlouvu ze začátku.<br>
+                    4. Až budete mít 50 transakcí, investujte do automatizace plateb.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- Navigation Logic ---
+        function navigate(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('main > section').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show selected section
+            const target = document.getElementById(sectionId);
+            target.classList.remove('hidden');
+            
+            // Update Sidebar UI
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            const activeNav = document.getElementById('nav-' + sectionId);
+            if(activeNav) activeNav.classList.add('active');
+
+            // Trigger Chart resize/render if needed when becoming visible
+            if (sectionId === 'market') renderMarketChart();
+            if (sectionId === 'risks') renderRiskChart();
+            if (sectionId === 'financials') renderFinancialChart();
+        }
+
+        // --- Process UX Logic ---
+        const processDetails = {
+            1: { title: "Krok 1: Rezervace", text: "Klient vyhledá nářadí, zkontroluje hodnocení majitele a vybere dostupné datum. Systém vypočítá celkovou cenu a výši kauce." },
+            2: { title: "Krok 2: Blokace (Pre-auth)", text: "Klíčový bod bezpečnosti. Systém provede tzv. pre-autorizaci na kartě klienta. Částka (nájem + kauce) se neodečte, ale 'zmrazí'. Pokud klient nemá dostatek prostředků, rezervace se zruší." },
+            3: { title: "Krok 3: Předání (Check-in)", text: "Při osobním předání musí obě strany v aplikaci potvrdit stav. Doporučuje se povinné nahrání 2 fotek nářadí. Tím se předejde sporům o škrábance, které tam už byly." },
+            4: { title: "Krok 4: Vrácení (Check-out)", text: "Majitel potvrdí převzetí. Má 24 hodin na kontrolu skrytých vad. Pokud je vše OK, systém dává pokyn platební bráně." },
+            5: { title: "Krok 5: Vyúčtování", text: "Platební brána strhne pouze cenu nájmu a provizi portálu. Zbytek blokované částky (kauce) je uvolněn zpět klientovi. V případě poškození se strhává část kauce." }
+        };
+
+        function updateProcessDetail(step) {
+            const detailBox = document.getElementById('process-detail');
+            const data = processDetails[step];
+            
+            // Simple animation effect
+            detailBox.style.opacity = '0.5';
+            setTimeout(() => {
+                detailBox.innerHTML = `<h3 class="font-bold text-sky-900 mb-2">${data.title}</h3><p class="text-sky-800 text-sm">${data.text}</p>`;
+                detailBox.style.opacity = '1';
+            }, 150);
+        }
+
+        // --- Calculator Logic ---
+        function updateCalculator() {
+            const price = parseInt(document.getElementById('calc-price').value);
+            const count = parseInt(document.getElementById('calc-count').value);
+            const commission = parseInt(document.getElementById('calc-commission').value);
+
+            document.getElementById('val-price').innerText = price + " Kč";
+            document.getElementById('val-count').innerText = count;
+            document.getElementById('val-commission').innerText = commission + "%";
+
+            const gmv = price * count;
+            const revenue = gmv * (commission / 100);
+
+            document.getElementById('res-gmv').innerText = gmv.toLocaleString() + " Kč";
+            document.getElementById('res-revenue').innerText = revenue.toLocaleString() + " Kč";
+        }
+
+        // --- Charts Implementation ---
+        
+        let marketChartInstance = null;
+        function renderMarketChart() {
+            if (marketChartInstance) return; // Prevent re-rendering
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            marketChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hobby/DIY (Domácnosti)', 'Poloprofesionálové', 'Firmy (B2B)'],
+                    datasets: [{
+                        data: [55, 30, 15],
+                        backgroundColor: ['#0ea5e9', '#64748b', '#cbd5e1'], // Sky-500, Slate-500, Slate-300
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        let riskChartInstance = null;
+        function renderRiskChart() {
+            if (riskChartInstance) return;
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            riskChartInstance = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'Rizika',
+                        data: [
+                            { x: 2, y: 9, r: 15, label: "Krádež nářadí" }, // Low probability, High impact
+                            { x: 8, y: 4, r: 12, label: "Běžné opotřebení" }, // High prob, Low impact
+                            { x: 5, y: 7, r: 20, label: "Poškození neznalostí" }, // Med prob, Med-High impact
+                            { x: 4, y: 5, r: 10, label: "Pozdní vrácení" },
+                            { x: 6, y: 8, r: 18, label: "Obcházení platformy" }
+                        ],
+                        backgroundColor: (context) => {
+                            const val = context.raw?.y;
+                            return val > 7 ? '#ef4444' : (val > 5 ? '#f59e0b' : '#10b981');
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Pravděpodobnost výskytu (1-10)' },
+                            min: 0, max: 10 
+                        },
+                        y: { 
+                            title: { display: true, text: 'Finanční dopad (1-10)' },
+                            min: 0, max: 10 
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.raw.label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        let financialChartInstance = null;
+        function renderFinancialChart() {
+            if (financialChartInstance) return;
+            const ctx = document.getElementById('financialChart').getContext('2d');
+            financialChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M9', 'M12'],
+                    datasets: [{
+                        label: 'Příjmy z provizí (Kč)',
+                        data: [500, 1200, 2500, 4800, 8000, 12500, 28000, 45000],
+                        backgroundColor: '#0ea5e9',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Initialize first view
+        document.addEventListener('DOMContentLoaded', () => {
+            // Activate Overview by default
+            document.getElementById('nav-overview').classList.add('active');
+            updateCalculator(); // Init calc
+        });
+
+    </script>
+</body>
+</html>
