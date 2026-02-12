@@ -1,0 +1,8 @@
+{
+  "name": "ShareIt - P2P Rental Platform",
+  "description": "A secure peer-to-peer sharing platform for tools, electronics, and outdoor gear with verified identities and flexible pricing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
